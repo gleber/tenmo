@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+    <style>
+     body, #graph, svg {
+         width: 100%;
+         height: 100%;
+     }
+     #graph {
+             position:absolute;
+             top:0px;
+             right:0px;
+             bottom:0px;
+             left:0px;
+     }
+    </style>
+</head>
+<body>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://d3js.org/d3-fetch.v1.min.js"></script>
+<script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+<script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+<div id="graph" style="text-align: center; absolute; top: 0; left: 0;"></div>
+<script>
+
+ var graphviz = d3.select("#graph").graphviz()
+                  .transition(function () {
+                      return d3.transition("main")
+                               .ease(d3.easeLinear)
+                               .delay(500)
+                               .duration(1500);
+                  })
+                  .logEvents(true)
+                  .on("initEnd", fetchDot);
+
+ function fetchDot() {
+     d3.text("/dot").then(function(text) {
+         console.log(text); // Hello, world!
+         render(text);
+     });
+ }
+
+ var last_dot = "";
+
+ function render(dot) {
+     last_dot = dot;
+     graphviz
+         .renderDot(dot)
+         .on("end", function () {
+             console.log('end');
+         });
+ }
+ var loc = window.location, new_uri;
+ if (loc.protocol === "https:") {
+     new_uri = "wss:";
+ } else {
+     new_uri = "ws:";
+ }
+ new_uri += "//" + loc.host;
+ new_uri += loc.pathname + "wsdot";
+
+ var ws = new WebSocket(new_uri)
+ ws.onerror = function(event) {
+     console.error("WebSocket error observed:", event);
+ };
+ ws.onmessage = function (event) {
+     var messages = document.getElementsByTagName('ul')[0],
+         message = document.createElement('li'),
+         content = document.createTextNode(event.data);
+     var obj = JSON.parse(event.data);
+     if (obj.dot != last_dot) {
+         dot = obj.dot;
+         render(dot);
+     }
+ };
+
+
+</script>
+</body>
